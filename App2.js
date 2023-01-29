@@ -1,7 +1,7 @@
-import React from 'react'
+
 import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, Text, View, Button, Alert, TextInput } from 'react-native';
-import React, [useState] from "react"
+import React, {useState} from "react"
 
 export default function App() {
   const[msg, setMsg] = React.useState("")

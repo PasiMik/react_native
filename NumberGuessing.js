@@ -8,15 +8,20 @@ export default function NumberGuessing() {
 const[inputNumber, setInputNumber] = useState("");    
 const[randomNumber, setRandomNumber] = useState("");
 const[guessedTimes, setGuessedTimes] = useState(1);
-const[shownText, setShownText] = useState("")
+const[shownText, setShownText] = useState("");
+const[refresh, setRefresh] = useState(false);
 
-useEffect(()=>
-startGame(), 
-[]);
+useEffect(()=>{
+    
+    setRefresh(false)
+    startGame()
+    },[refresh]);
 
 const startGame = () =>{
     setRandomNumber(Math.floor(Math.random() * 100) + 1 )
     setShownText("Guess number between 1 - 100")
+    //setGuessedTimes(1)
+    //setGuessnum("")
     }
 
 const checkGuess= () => {
@@ -31,13 +36,18 @@ const checkGuess= () => {
         
     }
     else{
-        setShownText("You guessed the number in " + guessedTimes + " guesses")
-        Alert.alert("You guessed the number in " + guessedTimes + " guesses")
+        Alert.alert("", "You guessed the number in " + guessedTimes + " guesses",
+        [{
+            text: "OK", onPress: () => setRefresh(true)
+        }]);
     }
+
+    //setGuessnum("")
+    //setCount(prevCount => prevCount +1);
 }
 
 console.log(randomNumber)
-console.log(inputNumber)
+
 return(
     <View style={styles.container}>
         <Text>{shownText}</Text>
