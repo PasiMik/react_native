@@ -1,8 +1,7 @@
-import { StyleSheet, Text, View, Button, Alert, TextInput, FlatList } from 'react-native';
+import { StyleSheet,Text, View, Button, Alert, TextInput, FlatList } from 'react-native';
 import React, {useState} from "react"
 
-
-export default function Calculator () {
+export default function Calculator ({navigation}) {
     const [result, setResult]= useState("");
     const [numberOne, setNumberOne] = useState("");
     const [numberTwo, setNumberTwo] = useState("");
@@ -40,26 +39,16 @@ export default function Calculator () {
             value={numberTwo}            
             />
             </View>
-            <View style={{flexDirection: "row"}}>
+            <View style={{flexDirection: "row", width:150, justifyContent:"space-around"}}>
                 <Button onPress={add} title=" + "/>
-                <View style={{marginHorizontal:5}}></View>
                 <Button onPress={deduct} title=" - "/>
+                <Button onPress={() => navigation.navigate('History', {data : history})}  title="History"/>
             </View>
-            <View style={{alignItems:"center"}}>
-                <Text>{historyText}</Text>
-                <FlatList
-                data = {history}
-                renderItem={({item})=><Text>{item}</Text>}
-                />
-            </View>
-
         </View>
     )
 }
-
 const styles = StyleSheet.create({
-    container: {
-      marginTop: 150,
+    container: {      
       flex: 1,
       backgroundColor: '#fff',
       alignItems: 'center',
