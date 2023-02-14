@@ -8,12 +8,11 @@ import * as Location from 'expo-location';
 
 
 export default function App() {
-    const [location, setLocation] = useState(null);
     const [address, setAddress] = useState({
-        latitude: "",
-        longitude: "",
-        latitudeDelta:"",
-        longitudeDelta: "",
+        latitude: 60.200,
+        longitude: 24.93,
+        latitudeDelta: 0.0222,
+        longitudeDelta: 0.0121
     });
     const[typedAddress, setTypedAddress] = useState("");
     const [searchedAddress, setSearchedAddress]=useState({
@@ -21,25 +20,6 @@ export default function App() {
         longitude:"",
         streetAddress:"",
     });
-
-    useEffect(()=>{
-        (async()=>{
-            let {status} = await Location.requestForegroundPermissionsAsync();
-            if(status !=='granted'){
-                Alert.alert('No permission to location')
-                return;
-            }
-            let location = await Location.getCurrentPositionAsync();
-            setLocation(location);
-            setAddress({
-                latitude: location.coords.latitude,
-                longitude: location.coords.longitude,
-                latitudeDelta: 0.0222,
-                longitudeDelta: 0.0121
-            })
-        })();
-    }, []);
-
     
     const mapRef =useRef();
 
