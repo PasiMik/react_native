@@ -3,7 +3,7 @@ import React, {useState, useEffect} from "react"
 
 export default function History({route}){
     const {data} = route.params
-    useEffect(() => {console.log(data)}, [])
+    
     
 return(
     <View style={{justifyContent: "center", alignItems:"center"}}>

@@ -1,20 +1,72 @@
-import { StyleSheet } from 'react-native';
-import React, {useState} from "react"
-import { NavigationContainer } from'@react-navigation/native';
-import { createNativeStackNavigator } from'@react-navigation/native-stack';
-import Calculatorhome from './components/Calculatorhome';
-import Calculatorhistory from './components/Calculatorhistory';
+import { StyleSheet, View, Text, TextInput, Button } from 'react-native';
+import React, {useState, useEffect, useRef} from "react";
+import MapView, {Marker} from 'react-native-maps';
+import * as Location from 'expo-location';
 
-const Stack = createNativeStackNavigator();
+
+
 
 export default function App() {
+    const [address, setAddress] = useState({
+        latitude: 60.200,
+        longitude: 24.93,
+        latitudeDelta: 0.0222,
+        longitudeDelta: 0.0121
+    });
+    const[typedAddress, setTypedAddress] = useState("");
+    const [searchedAddress, setSearchedAddress]=useState({
+        latitude:"",
+        longitude:"",
+        streetAddress:"",
+    });
+    
+    const mapRef =useRef();
+
+    const findAddress=()=>{
+        fetch(`http://www.mapquestapi.com/geocoding/v1/address?key=cKyejkBu38157GgPd7U2uLK7ODxtUao1&location=${typedAddress}`)
+        .then(response => response.json())
+        .then(data=>{
+            setSearchedAddress({
+                latitude: data.results[0].locations[0].displayLatLng.lat,
+                longitude:data.results[0].locations[0].displayLatLng.lng,
+                streetAddress:data.results[0].locations[0].street,
+            })
+            
+            mapRef.current.animateToRegion({
+                latitude: data.results[0].locations[0].displayLatLng.lat,
+                longitude: data.results[0].locations[0].displayLatLng.lng,
+                latitudeDelta: 0.0222,
+                longitudeDelta: 0.0121
+            })
+        })
+        .catch(err => console.error(err))
+    }
+    
+    
+
     return(
-        <NavigationContainer>
-            <Stack.Navigator>
-                <Stack.Screen name="Calculator" component={Calculatorhome}/>
-                <Stack.Screen name="History" component={Calculatorhistory}/>
-            </Stack.Navigator>
-        </NavigationContainer>
+        <View style={styles.container}>
+            <MapView 
+            ref={mapRef}
+            style={{width:'100%', height:'90%'}}
+            region ={address}>       
+            <Marker
+            coordinate={{
+                latitude: Number(searchedAddress.latitude),
+                longitude: Number(searchedAddress.longitude)
+            }}
+            title={searchedAddress.streetAddress}/>
+            </MapView>
+        <View>
+            <TextInput
+            placeholder='Type address here'
+            value={typedAddress}
+            onChangeText={(text) => setTypedAddress(text)}
+            style={{width:'100%', borderColor:'gray', borderWidth:1 }}
+            />
+            <Button title='SHOW' onPress={findAddress}></Button>
+            </View>
+        </View>
     )
 
 }
@@ -22,8 +74,6 @@ export default function App() {
 const styles = StyleSheet.create({
     container: {
       flex: 1,
-      backgroundColor: '#fff',
-      alignItems: 'center',
-      justifyContent: 'center',
+      backgroundColor: '#fff',      
     },
   });
