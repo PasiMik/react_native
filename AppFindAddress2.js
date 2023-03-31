@@ -2,17 +2,20 @@ import { StyleSheet, View, Text, TextInput, Button } from 'react-native';
 import React, {useState, useEffect, useRef} from "react";
 import MapView, {Marker} from 'react-native-maps';
 import {MAP_API_TOKEN} from '@env';
-
+import * as Location from 'expo-location';
 
 
 
 
 export default function App() {
+    
+    const [location, setLocation] = useState(null);
     const [address, setAddress] = useState({
-        latitude: 60.200,
-        longitude: 24.93,
-        latitudeDelta: 0.0222,
-        longitudeDelta: 0.0121
+        latitude: "",
+        longitude: "",
+        latitudeDelta:"",
+        longitudeDelta: "",
+        streetAddress:"",
     });
     const[typedAddress, setTypedAddress] = useState("");
     const [searchedAddress, setSearchedAddress]=useState({
@@ -21,56 +24,73 @@ export default function App() {
         streetAddress:"",
     });
     
+    
+    useEffect(()=>{
+        (async()=>{
+            let {status} = await Location.requestForegroundPermissionsAsync();
+            if(status !=='granted'){
+                Alert.alert('No permission to location')
+                return;
+            }
+            let location = await Location.getCurrentPositionAsync();
+            setLocation(location);
+            setAddress({
+                latitude: location.coords.latitude,
+                longitude: location.coords.longitude,
+                latitudeDelta: 0.0222,
+                longitudeDelta: 0.0121,
+                streetAddress:"",
+            })
+        })();
+        
+    }, []);
+
+    
     const mapRef =useRef();
 
     const findAddress=()=>{
+       
+        
         fetch(`http://www.mapquestapi.com/geocoding/v1/address?key=${MAP_API_TOKEN}&location=${typedAddress}`)
         .then(response => response.json())
-        .then(data=>{
-            setSearchedAddress({
-                latitude: data.results[0].locations[0].displayLatLng.lat,
-                longitude:data.results[0].locations[0].displayLatLng.lng,
+        .then(data=>{            
+             setAddress({
+                latitude: data.results[0].locations[0].latLng.lat,
+                longitude:data.results[0].locations[0].latLng.lng,
+                latitudeDelta: 0.0222,
+                longitudeDelta: 0.0121,
                 streetAddress:data.results[0].locations[0].street,
             })
             
+            
             mapRef.current.animateToRegion({
-                latitude: data.results[0].locations[0].displayLatLng.lat,
-                longitude: data.results[0].locations[0].displayLatLng.lng,
+                latitude: data.results[0].locations[0].latLng.lat,
+                longitude: data.results[0].locations[0].latLng.lng,
                 latitudeDelta: 0.0222,
                 longitudeDelta: 0.0121
             })
-            setAddress({
-                latitude: "",
-                longitude: "",
-                latitudeDelta: "",
-                longitudeDelta:"",
-            })
-
+            
         })
         .catch(err => console.error(err))
     }
     
     
+    
 
     return(
         <View style={styles.container}>
-            <MapView 
+             <MapView 
             ref={mapRef}
             style={{width:'100%', height:'90%'}}
             region ={address}>       
             <Marker
             coordinate={{
-                latitude: Number(searchedAddress.latitude),
-                longitude: Number(searchedAddress.longitude)
-            }}
-            title={searchedAddress.streetAddress}/>
-            <Marker
-            coordinate={{
                 latitude: Number(address.latitude),
                 longitude: Number(address.longitude)
             }}
-            title='Haaga-Helia'/>
-            </MapView>
+            title={address.streetAddress}
+            />
+            </MapView>  
         <View>
             <TextInput
             placeholder='Type address here'

@@ -1,100 +1,116 @@
-import { StyleSheet, View, Text, TextInput, Button } from 'react-native';
-import React, {useState, useEffect, useRef} from "react";
-import MapView, {Marker} from 'react-native-maps';
-import {MAP_API_TOKEN} from '@env';
-import * as Location from 'expo-location';
+import React, { useState, useEffect } from 'react';
+import { StyleSheet, Text, TextInput, View, FlatList, Alert } from 'react-native';
+import * as SQLite from 'expo-sqlite';
+import { Header, Input, Button, Icon,ListItem } from '@rneui/themed';
 
 
-
+const db = SQLite.openDatabase('coursedb.db');
 
 export default function App() {
-    const [location, setLocation] = useState(null);
-    const [address, setAddress] = useState({
-        latitude: "",
-        longitude: "",
-        latitudeDelta:"",
-        longitudeDelta: "",
+  const [credit, setCredit] = useState('');
+  const [title, setTitle] = useState('');
+  const [courses, setCourses] = useState([]);
+
+  useEffect(() => {
+    db.transaction(tx => {
+      tx.executeSql('create table if not exists course (id integer primary key not null, credits int, title text);');
     });
-    const[typedAddress, setTypedAddress] = useState("");
-    const [searchedAddress, setSearchedAddress]=useState({
-        latitude:"",
-        longitude:"",
-        streetAddress:"",
-    });
+    updateList();    
+  }, []);
 
-    useEffect(()=>{
-        (async()=>{
-            let {status} = await Location.requestForegroundPermissionsAsync();
-            if(status !=='granted'){
-                Alert.alert('No permission to location')
-                return;
-            }
-            let location = await Location.getCurrentPositionAsync();
-            setLocation(location);
-            setAddress({
-                latitude: location.coords.latitude,
-                longitude: location.coords.longitude,
-                latitudeDelta: 0.0222,
-                longitudeDelta: 0.0121
-            })
-        })();
-    }, []);
-
-    
-    const mapRef =useRef();
-
-    const findAddress=()=>{
-        fetch(`http://www.mapquestapi.com/geocoding/v1/address?key=${MAP_API_TOKEN}=${typedAddress}`)
-        .then(response => response.json())
-        .then(data=>{
-            setSearchedAddress({
-                latitude: data.results[0].locations[0].displayLatLng.lat,
-                longitude:data.results[0].locations[0].displayLatLng.lng,
-                streetAddress:data.results[0].locations[0].street,
-            })
-            
-            mapRef.current.animateToRegion({
-                latitude: data.results[0].locations[0].displayLatLng.lat,
-                longitude: data.results[0].locations[0].displayLatLng.lng,
-                latitudeDelta: 0.0222,
-                longitudeDelta: 0.0121
-            })
-        })
-        .catch(err => console.error(err))
+  // Save course
+  const saveItem = () => {
+    if (credit && title) {
+      db.transaction(tx => {
+          tx.executeSql('insert into course (credits, title) values (?, ?);', [parseInt(credit), title]);    
+        }, null, updateList
+      )
     }
-    
-    
+    else {
+      Alert.alert('Error', 'Type credit and title first');
+    }
+  }
 
-    return(
-        <View style={styles.container}>
-            <MapView 
-            ref={mapRef}
-            style={{width:'100%', height:'90%'}}
-            region ={address}>       
-            <Marker
-            coordinate={{
-                latitude: Number(searchedAddress.latitude),
-                longitude: Number(searchedAddress.longitude)
-            }}
-            title={searchedAddress.streetAddress}/>
-            </MapView>
-        <View>
-            <TextInput
-            placeholder='Type address here'
-            value={typedAddress}
-            onChangeText={(text) => setTypedAddress(text)}
-            style={{width:'100%', borderColor:'gray', borderWidth:1 }}
+  // Update courselist
+  const updateList = () => {
+    db.transaction(tx => {
+      tx.executeSql('select * from course;', [], (_, { rows }) =>
+        setCourses(rows._array)
+      ); 
+      setTitle('');
+      setCredit('')
+    });
+  }
+
+  // Delete course
+  const deleteItem = (id) => {
+    db.transaction(
+      tx => {
+        tx.executeSql(`delete from course where id = ?;`, [id]);
+      }, null, updateList
+    )    
+  }
+
+  
+
+  return (
+    <View style={styles.container}>
+      <Header
+        centerComponent={{text:'My courses', style:{fontSize:16, color:'white'}}}
+      />
+      <Input 
+        placeholder='Title' 
+        onChangeText={title => setTitle(title)}
+        value={title}/>  
+      <Input placeholder='Credits' 
+        keyboardType="numeric" 
+        onChangeText={credit => setCredit(credit)}
+        value={credit}/>      
+      <Button
+      onPress={saveItem} >
+        SAVE
+        <Icon name='save' color='white' style={{marginLeft:10}}/>
+       </Button> 
+    
+      <FlatList 
+        style={{marginLeft : "5%"}}
+        keyExtractor={item => item.id.toString()} 
+        renderItem={({item}) => 
+          <ListItem.Swipeable bottomDivider
+          rightContent={(action) => (
+            <Button
+              containerStyle={{
+                flex: 1,
+                justifyContent: 'center',
+                backgroundColor: '#f4f4f4',
+              }}
+              type="clear"
+              icon={{ name: 'delete-outline' }}
+              onPress={()=> deleteItem(item.id)}
             />
-            <Button title='SHOW' onPress={findAddress}></Button>
-            </View>
-        </View>
-    )
-
+          )}
+          >
+            <ListItem.Content>
+              <ListItem.Title>{item.title}</ListItem.Title>
+              <ListItem.Subtitle>{item.credits}</ListItem.Subtitle>
+            </ListItem.Content>
+          </ListItem.Swipeable>} 
+        data={courses} 
+        
+      />      
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: '#fff',      
-    },
-  });
+ container: {
+  marginTop: 50,
+  flex: 1,
+  backgroundColor: '#fff',
+ },
+ listcontainer: {
+  flexDirection: 'row',
+  backgroundColor: '#fff',
+  alignItems: 'center'
+ },
+});
