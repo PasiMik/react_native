@@ -1,116 +1,98 @@
-import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, TextInput, View, FlatList, Alert } from 'react-native';
-import * as SQLite from 'expo-sqlite';
-import { Header, Input, Button, Icon,ListItem } from '@rneui/themed';
+import React, {useState, useEffect, useRef} from 'react';
+import {ImageBackground, StyleSheet, Text, View, TextInput, FlatList } from 'react-native'
+import { Input, Button, Dialog } from '@rneui/base';
+import { DialogTitle } from '@rneui/base/dist/Dialog/Dialog.Title';
+import MapView, {Marker} from 'react-native-maps';
+import {MAP_API_TOKEN} from '@env';
+
+export default function App(){
+const[place, setPlace] = useState('');
+const [visible, setVisible] = useState(false);
+const[foundPlace, setFoundPlace]=useState({
+    latitude: 60.17116,
+    longitude: 24.93265,
+    place:'Helsinki',
+    latitudeDelta: 5,
+    longitudeDelta: 10,
+});
+
+const mapRef =useRef();
 
 
-const db = SQLite.openDatabase('coursedb.db');
-
-export default function App() {
-  const [credit, setCredit] = useState('');
-  const [title, setTitle] = useState('');
-  const [courses, setCourses] = useState([]);
-
-  useEffect(() => {
-    db.transaction(tx => {
-      tx.executeSql('create table if not exists course (id integer primary key not null, credits int, title text);');
-    });
-    updateList();    
-  }, []);
-
-  // Save course
-  const saveItem = () => {
-    if (credit && title) {
-      db.transaction(tx => {
-          tx.executeSql('insert into course (credits, title) values (?, ?);', [parseInt(credit), title]);    
-        }, null, updateList
-      )
-    }
-    else {
-      Alert.alert('Error', 'Type credit and title first');
-    }
-  }
-
-  // Update courselist
-  const updateList = () => {
-    db.transaction(tx => {
-      tx.executeSql('select * from course;', [], (_, { rows }) =>
-        setCourses(rows._array)
-      ); 
-      setTitle('');
-      setCredit('')
-    });
-  }
-
-  // Delete course
-  const deleteItem = (id) => {
-    db.transaction(
-      tx => {
-        tx.executeSql(`delete from course where id = ?;`, [id]);
-      }, null, updateList
-    )    
-  }
-
-  
-
-  return (
-    <View style={styles.container}>
-      <Header
-        centerComponent={{text:'My courses', style:{fontSize:16, color:'white'}}}
-      />
-      <Input 
-        placeholder='Title' 
-        onChangeText={title => setTitle(title)}
-        value={title}/>  
-      <Input placeholder='Credits' 
-        keyboardType="numeric" 
-        onChangeText={credit => setCredit(credit)}
-        value={credit}/>      
-      <Button
-      onPress={saveItem} >
-        SAVE
-        <Icon name='save' color='white' style={{marginLeft:10}}/>
-       </Button> 
-    
-      <FlatList 
-        style={{marginLeft : "5%"}}
-        keyExtractor={item => item.id.toString()} 
-        renderItem={({item}) => 
-          <ListItem.Swipeable bottomDivider
-          rightContent={(action) => (
-            <Button
-              containerStyle={{
-                flex: 1,
-                justifyContent: 'center',
-                backgroundColor: '#f4f4f4',
-              }}
-              type="clear"
-              icon={{ name: 'delete-outline' }}
-              onPress={()=> deleteItem(item.id)}
-            />
-          )}
-          >
-            <ListItem.Content>
-              <ListItem.Title>{item.title}</ListItem.Title>
-              <ListItem.Subtitle>{item.credits}</ListItem.Subtitle>
-            </ListItem.Content>
-          </ListItem.Swipeable>} 
-        data={courses} 
+const findAddress=()=>{
+    fetch(`http://www.mapquestapi.com/geocoding/v1/address?key=${MAP_API_TOKEN}&location=${place}`)
+    .then(response => response.json())
+    .then(data=>{
+        setFoundPlace({
+            latitude: data.results[0].locations[0].displayLatLng.lat,
+            longitude:data.results[0].locations[0].displayLatLng.lng,
+            place: data.results[0].locations[0].adminArea5,
+            latitudeDelta: 1,
+            longitudeDelta: 1,
+        })
         
-      />      
-    </View>
-  );
+
+    })
+    .catch(err => console.error(err))
 }
 
+const openDialog =()=>{
+    setVisible(true);
+    findAddress();
+    
+}
+const closeDialog =()=>{
+    setVisible(false);
+    setPlace('');  
+    
+}
+
+
+
+    return(
+        <View style={styles.container}>
+             <Input
+            label='Place'
+            value={place}
+            onChangeText={text => setPlace(text)}        
+            />
+            <View style={{width:200}}>
+                <Button title='SHOW ON MAP' onPress={()=>openDialog()} />
+            </View>
+            <View>
+            <Dialog isVisible={visible} onBackdropPress={closeDialog} overlayStyle={{backgroundColor:'#E5E4E2', height:'60%', }}>
+                <DialogTitle title='Place of test'/>
+                <View style={{height:'85%'}}>
+                <MapView 
+                ref={mapRef}
+                style={{width:'100%', height:'100%'}}
+                region={foundPlace}>
+                <Marker
+                coordinate={{
+                latitude: Number(foundPlace.latitude),
+                longitude: Number(foundPlace.longitude)
+                }}
+                title={foundPlace.place}/>
+            </MapView>                    
+                </View>
+                <View style={{ alignItems: 'center' }}>
+                <Button title='Close' onPress={closeDialog} />
+                </View>
+            </Dialog>
+
+            </View>
+
+        </View>
+    )
+};
+
 const styles = StyleSheet.create({
- container: {
-  marginTop: 50,
-  flex: 1,
-  backgroundColor: '#fff',
- },
- listcontainer: {
-  flexDirection: 'row',
-  backgroundColor: '#fff',
-  alignItems: 'center'
- },
-});
+    container: {
+      flex: 1,
+      backgroundColor: '#fff',
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginTop:100,
+      paddingBottom:50
+    },
+  });
